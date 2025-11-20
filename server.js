@@ -11,6 +11,11 @@ app.use(cors());
 app.use(express.json());
 app.use(fileUpload());
 
+
+
+
+
+
 // ✅ Serve frontend folder
 app.use(express.static(path.join(__dirname, "frontend")));
 
