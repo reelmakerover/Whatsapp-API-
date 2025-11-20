@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WhatsApp Marketing Pro</title>
+  <style>
+    body { background:#0b1220; color:#eee; font-family:sans-serif; display:flex; justify-content:center; padding:30px; }
+    .box { width:600px; background:#121a2f; padding:20px; border-radius:10px; }
+    label { display:block; margin-top:10px; font-weight:bold; color:#94a3b8; }
+    input, select, textarea, button { width:100%; margin-top:6px; padding:10px; border-radius:6px; border:none; }
+    textarea { height:100px; }
+    button { background:#16a34a; color:white; font-weight:bold; cursor:pointer; }
+    .log { background:#1f2937; padding:10px; border-radius:6px; height:200px; overflow:auto; margin-top:10px; font-family:monospace; font-size:13px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>📢 WhatsApp Marketing Pro UI</h2>
+
+    <label>Upload Excel File</label>
+    <input type="file" id="fileInput" accept=".xlsx" />
+    <button id="uploadBtn">Upload</button>
+
+    <label>Starting Serial No.</label>
+    <input type="number" id="startNo" value="1" />
+
+    <label>Select Template</label>
+    <select id="templateSelect"></select>
+
+    <label>Template Message</label>
+    <textarea id="templateText"></textarea>
+
+    <button id="startBtn">Start Campaign</button>
+    <div class="log" id="log"></div>
+  </div>
+
+  <script>
+    const API = "http://localhost:5000";
+    const logBox = document.getElementById("log");
+    const templateSelect = document.getElementById("templateSelect");
+    const templateText = document.getElementById("templateText");
+
+    function log(msg) {
+      const t = new Date().toLocaleTimeString();
+      logBox.innerHTML = `[${t}] ${msg}<br>` + logBox.innerHTML;
+    }
+
+    async function fetchTemplates() {
+      const res = await fetch(API + "/api/templates");
+      const list = await res.json();
+      templateSelect.innerHTML = list.map(t => `<option>${t}</option>`).join("");
+      if (list.length > 0) loadTemplate(list[0]);
+    }
+
+    async function loadTemplate(name) {
+      const res = await fetch(API + "/api/templates/" + name);
+      const text = await res.text();
+      templateText.value = text;
+    }
+
+    document.getElementById("uploadBtn").onclick = async () => {
+      const file = document.getElementById("fileInput").files[0];
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(API + "/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.success) log("✅ Excel uploaded successfully.");
+    };
+
+    document.getElementById("startBtn").onclick = async () => {
+      const body = {
+        start: parseInt(document.getElementById("startNo").value) || 1,
+        templateBody: templateText.value
+      };
+      const res = await fetch(API + "/api/start", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.success) {
+        log("🚀 Campaign started!");
+        pollProgress();
+      } else log("❌ " + data.error);
+    };
+
+    async function pollProgress() {
+      const timer = setInterval(async () => {
+        const res = await fetch(API + "/api/progress");
+        const p = await res.json();
+        log(`${p.sent}/${p.total} sent — ${p.last}`);
+        if (p.finished) {
+          log("🎉 Campaign completed!");
+          clearInterval(timer);
+        }
+      }, 3000);
+    }
+
+    fetchTemplates();
+  </script>
+</body>
+</html>

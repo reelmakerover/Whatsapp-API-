@@ -1,0 +1,4 @@
+Hey {{Name}},
+This is a friendly reminder about our latest updates.
+Contact us today.
+- SysB Marketing
